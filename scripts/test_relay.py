@@ -93,6 +93,9 @@ async def run_test():
                 
                 sender_notification = await sender_ws.receive_json()
                 print(f"[Sender WS] Notification: {sender_notification}")
+                if sender_notification.get("type") == "download_started":
+                    start_upload_notification = await sender_ws.receive_json()
+                    print(f"[Sender WS] Start upload notification: {start_upload_notification}")
 
                 # STEP 5: Sender uploads chunks
                 print("\n[STEP 5] Sender uploading chunks...")

@@ -1,5 +1,6 @@
 import string
 import random
+import asyncio
 from typing import Dict, List, Optional
 from app.rooms.models import Room, FileMetadata, ReceiverState
 
@@ -7,6 +8,8 @@ class RoomManager:
     def __init__(self):
         # Maps room_id (e.g. "A4D8F2") -> Room object
         self.rooms: Dict[str, Room] = {}
+        # Maps (room_id, file_id, chunk_index) -> list of asyncio.Event objects
+        self.chunk_events: Dict[tuple[str, str, int], List[asyncio.Event]] = {}
 
     def _generate_code(self, length: int = 6) -> str:
         """Generate a random alphanumeric uppercase string."""
@@ -110,9 +113,42 @@ class RoomManager:
             room.receivers[client_id].connected = False
         return room
 
+    def get_or_create_chunk_event(self, room_id: str, file_id: str, chunk_index: int) -> asyncio.Event:
+        """Create and register an asyncio.Event for a pending chunk."""
+        key = (room_id.upper(), file_id, chunk_index)
+        event = asyncio.Event()
+        if key not in self.chunk_events:
+            self.chunk_events[key] = []
+        self.chunk_events[key].append(event)
+        return event
+
+    def remove_chunk_event(self, room_id: str, file_id: str, chunk_index: int, event: asyncio.Event):
+        """Remove a specific Event from the registry."""
+        key = (room_id.upper(), file_id, chunk_index)
+        if key in self.chunk_events:
+            if event in self.chunk_events[key]:
+                self.chunk_events[key].remove(event)
+            if not self.chunk_events[key]:
+                del self.chunk_events[key]
+
+    def trigger_chunk_event(self, room_id: str, file_id: str, chunk_index: int):
+        """Wake up all listeners waiting for this chunk."""
+        key = (room_id.upper(), file_id, chunk_index)
+        events = self.chunk_events.pop(key, [])
+        for event in events:
+            event.set()
+
     def remove_room(self, room_id: str) -> bool:
         """Remove a room from the registry."""
         room_id_upper = room_id.upper()
+        
+        # Clean up chunk events for this room
+        keys_to_del = [k for k in self.chunk_events.keys() if k[0] == room_id_upper]
+        for k in keys_to_del:
+            events = self.chunk_events.pop(k, [])
+            for event in events:
+                event.set()
+                
         if room_id_upper in self.rooms:
             del self.rooms[room_id_upper]
             return True

@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import HTTPException, status
 from app.rooms.room_manager import room_manager
 from app.transfers.chunk_manager import chunk_manager, CHUNK_SIZE
@@ -46,10 +47,24 @@ async def handle_chunk_download(
         )
 
     if chunk_index not in file_meta.uploaded_chunks:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Chunk {chunk_index} has not been uploaded by the sender yet"
-        )
+        # Suspend request (long-poll) until chunk is uploaded by the sender
+        event = room_manager.get_or_create_chunk_event(room_id, file_id, chunk_index)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=30.0)
+        except asyncio.TimeoutError:
+            raise HTTPException(
+                status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                detail=f"Timeout waiting for chunk {chunk_index} to be uploaded by the sender"
+            )
+        finally:
+            room_manager.remove_chunk_event(room_id, file_id, chunk_index, event)
+
+        # Re-check availability after event triggers
+        if chunk_index not in file_meta.uploaded_chunks:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Chunk {chunk_index} is not available"
+            )
 
     expected_chunk_size = CHUNK_SIZE
     if chunk_index == file_meta.total_chunks - 1:

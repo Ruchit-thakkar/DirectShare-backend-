@@ -67,6 +67,9 @@ async def handle_chunk_upload(
     await chunk_manager.write_chunk(room_id, file_id, chunk_index, data)
 
     is_fully_uploaded = room_manager.mark_chunk_uploaded(room_id, file_id, chunk_index)
+    
+    # Wake up any waiting download requests for this chunk
+    room_manager.trigger_chunk_event(room_id, file_id, chunk_index)
 
     uploaded_chunks_count = len(file_meta.uploaded_chunks)
     progress_percentage = (uploaded_chunks_count / file_meta.total_chunks) * 100

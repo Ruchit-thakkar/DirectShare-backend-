@@ -115,11 +115,21 @@ async def websocket_endpoint(
             elif msg_type == "accept_download":
                 if role == "receiver":
                     file_id = data.get("file_id")
+                    file_meta = room.files.get(file_id)
+                    is_complete = file_meta and len(file_meta.uploaded_chunks) == file_meta.total_chunks
+                    
                     await websocket_manager.send_to_sender(room_code_upper, {
                         "type": "download_started",
                         "receiver_id": client_id,
                         "file_id": file_id
                     })
+                    
+                    if not is_complete:
+                        await websocket_manager.send_to_sender(room_code_upper, {
+                            "type": "start_upload",
+                            "file_id": file_id,
+                            "receiver_id": client_id
+                        })
 
     except WebSocketDisconnect:
         pass
