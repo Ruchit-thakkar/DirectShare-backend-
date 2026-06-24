@@ -9,12 +9,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python packages
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    chmod -R a+rX /usr/local
 
 # Copy application files
 COPY app /app/app
 
 # Set environment variables
+ENV PATH=/usr/local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
 
 # Expose port (for documentation/local use)
@@ -23,7 +25,8 @@ EXPOSE 8000
 # Create a non-root user and set permissions for temp storage
 RUN useradd -u 10001 -m appuser && \
     mkdir -p /app/app/storage/temp && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    chmod -R a+rX /app
 
 USER appuser
 
