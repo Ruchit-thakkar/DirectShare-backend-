@@ -4,7 +4,6 @@
     "builder": "docker"
   },
   "deploy": {
-    "port": 8000,
     "healthcheckPath": "/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE"
