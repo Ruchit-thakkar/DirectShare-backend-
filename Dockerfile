@@ -22,7 +22,7 @@ COPY app /app/app
 ENV PATH=/root/.local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
 
-# Expose port (Railway passes $PORT environment variable)
+# Expose port
 EXPOSE 8000
 
 # Create a non-root user and set permissions for temp storage
@@ -32,9 +32,9 @@ RUN useradd -u 10001 -m appuser && \
 
 USER appuser
 
-# Health check using Python's built-in urllib on the dynamic PORT
+# Health check using Python's built-in urllib on port 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD python -c "import urllib.request, os; port = os.environ.get('PORT', '8000'); urllib.request.urlopen(f'http://localhost:{port}/health')" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-# Start the FastAPI application
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Start the FastAPI application on port 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
