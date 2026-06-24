@@ -1,28 +1,23 @@
-# Stage 1: Build dependencies in a temporary container
-FROM python:3.12-slim AS builder
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Stage 2: Build final lightweight container
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /usr/local /usr/local
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
 COPY app /app/app
 
-ENV PATH=/usr/local/bin:$PATH
+# Set environment variables
 ENV PYTHONUNBUFFERED=1
 
-# Expose port
+# Expose port (for documentation/local use)
 EXPOSE 8000
 
 # Create a non-root user and set permissions for temp storage
