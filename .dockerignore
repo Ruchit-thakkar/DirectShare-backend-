@@ -1,0 +1,6 @@
+*.pyc
+__pycache__
+app/storage/temp/*
+.env*
+scripts/*
+tests/*
