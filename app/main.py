@@ -25,6 +25,10 @@ app.add_middleware(
     expose_headers=["X-Room-ID", "X-File-ID", "X-Chunk-Index", "X-Chunk-Size", "X-Checksum"]
 )
 
+# Include WebRTC Signaling WebSocket Router
+from app.api.signaling import router as signaling_router
+app.include_router(signaling_router)
+
 @app.get("/")
 def home():
     """Welcome route."""
