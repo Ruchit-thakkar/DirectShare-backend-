@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     
     # CORS Origin
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://directshare007.netlify.app")
     
     # Storage Configuration
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
